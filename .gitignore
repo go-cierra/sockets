@@ -1,3 +1,4 @@
 example/gin-bin
 example/main
 .tm_properties
+.idea/

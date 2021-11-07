@@ -15,7 +15,7 @@ import (
 	"regexp"
 	"time"
 
-	"gopkg.in/macaron.v1"
+	"github.com/flamego/flamego"
 	"github.com/gorilla/websocket"
 )
 
@@ -118,8 +118,8 @@ type Binding interface {
 	recv()
 	send()
 	setSocketOptions()
-	mapChannels(*macaron.Context)
-	mapDefaultChannels(*macaron.Context)
+	mapChannels(flamego.Context)
+	mapDefaultChannels(flamego.Context)
 	disconnectChannel() chan error
 	DisconnectChannel() chan int
 	ErrorChannel() chan error
@@ -196,7 +196,7 @@ type ByteSliceConnection struct {
 // - Starting and terminating the necessary goroutines
 // An optional sockets.Options object can be passed to Messages to overwrite
 // default options mentioned in the documentation of the Options object.
-func ByteSliceMessages(options ...*Options) macaron.Handler {
+func ByteSliceMessages(options ...*Options) flamego.Handler {
 	return makeHandler([]byte{}, newOptions(options))
 }
 
@@ -223,7 +223,7 @@ func ByteSliceMessages(options ...*Options) macaron.Handler {
 // - Starting and terminating the necessary goroutines
 // An optional sockets.Options object can be passed to Messages to overwrite
 // default options mentioned in the documentation of the Options object.
-func Messages(options ...*Options) macaron.Handler {
+func Messages(options ...*Options) flamego.Handler {
 	return makeHandler("", newOptions(options))
 }
 
@@ -255,14 +255,14 @@ func Messages(options ...*Options) macaron.Handler {
 // - Starting and terminating the necessary goroutines
 // An optional sockets.Options object can be passed to Messages to overwrite
 // default options mentioned in the documentation of the Options object.
-func JSON(bindStruct interface{}, options ...*Options) macaron.Handler {
+func JSON(bindStruct interface{}, options ...*Options) flamego.Handler {
 	return makeHandler(bindStruct, newOptions(options))
 }
 
 // Generates a handler from an interface
-func makeHandler(binding interface{}, o *Options) macaron.Handler {
+func makeHandler(binding interface{}, o *Options) flamego.Handler {
 
-	return func(context *macaron.Context, resp http.ResponseWriter, req *http.Request) {
+	return func(context flamego.Context, resp http.ResponseWriter, req *http.Request) {
 		// Upgrade the request to a websocket connection
 		ws, status, err := upgradeRequest(resp, req, o)
 		if err != nil {
@@ -328,7 +328,7 @@ func (c *Connection) setSocketOptions() {
 // Map the Error Channel to a <-chan error for the next Handler(s)
 // Map the Disconnect Channel to a chan<- bool for the next Handler(s)
 // Map the Done Channel to a <-chan bool for the next Handler(s)
-func (c *Connection) mapDefaultChannels(context *macaron.Context) {
+func (c *Connection) mapDefaultChannels(context flamego.Context) {
 	context.Set(reflect.ChanOf(reflect.RecvDir, reflect.TypeOf(c.Error).Elem()), reflect.ValueOf(c.Error))
 	context.Set(reflect.ChanOf(reflect.SendDir, reflect.TypeOf(c.Disconnect).Elem()), reflect.ValueOf(c.Disconnect))
 	context.Set(reflect.ChanOf(reflect.RecvDir, reflect.TypeOf(c.Done).Elem()), reflect.ValueOf(c.Done))
@@ -500,7 +500,7 @@ func (c *MessageConnection) recv() {
 
 // Map the Receiver to a chan<- string for the next Handler(s)
 // Map the Receiver to a <-chan string for the next Handler(s)
-func (c *MessageConnection) mapChannels(context *macaron.Context) {
+func (c *MessageConnection) mapChannels(context flamego.Context) {
 	context.Set(reflect.ChanOf(reflect.SendDir, reflect.TypeOf(c.Sender).Elem()), reflect.ValueOf(c.Sender))
 	context.Set(reflect.ChanOf(reflect.RecvDir, reflect.TypeOf(c.Receiver).Elem()), reflect.ValueOf(c.Receiver))
 }
@@ -606,7 +606,7 @@ func (c *JSONConnection) newOfType() reflect.Value {
 
 // Map the Sender to a chan<- *Message for the next Handler(s)
 // Map the Receiver to a <-chan *Message for the next Handler(s)
-func (c *JSONConnection) mapChannels(context *macaron.Context) {
+func (c *JSONConnection) mapChannels(context flamego.Context) {
 	context.Set(reflect.ChanOf(reflect.SendDir, c.Sender.Type().Elem()), c.Sender)
 	context.Set(reflect.ChanOf(reflect.RecvDir, c.Receiver.Type().Elem()), c.Receiver)
 }
@@ -705,7 +705,7 @@ func (c *ByteSliceConnection) recv() {
 
 // Map the Receiver to a chan<- []byte for the next Handler(s)
 // Map the Receiver to a <-chan []byte  for the next Handler(s)
-func (c *ByteSliceConnection) mapChannels(context *macaron.Context) {
+func (c *ByteSliceConnection) mapChannels(context flamego.Context) {
 	context.Set(reflect.ChanOf(reflect.SendDir, reflect.TypeOf(c.Sender).Elem()), reflect.ValueOf(c.Sender))
 	context.Set(reflect.ChanOf(reflect.RecvDir, reflect.TypeOf(c.Receiver).Elem()), reflect.ValueOf(c.Receiver))
 }
